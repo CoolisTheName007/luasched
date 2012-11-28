@@ -187,9 +187,112 @@ pullEvent = function (event)
 	end
 end,
 sleep = function (n)
-	sched.sleep(n)
-end
+	sched.wait(n)
+end,
 }
+
+function read( _sReplaceChar, _tHistory )	
+	term.setCursorBlink( true )
+
+    local sLine = ""
+	local nHistoryPos = nil
+	local nPos = 0
+    if _sReplaceChar then
+		_sReplaceChar = string.sub( _sReplaceChar, 1, 1 )
+	end
+	
+	local w, h = term.getSize()
+	local sx, sy = term.getCursorPos()	
+	local function redraw()
+		local nScroll = 0
+		if sx + nPos >= w then
+			nScroll = (sx + nPos) - w
+		end
+			
+		term.setCursorPos( sx, sy )
+		term.write( string.rep(" ", w - sx + 1) )
+		term.setCursorPos( sx, sy )
+		if _sReplaceChar then
+			term.write( string.rep(_sReplaceChar, string.len(sLine) - nScroll) )
+		else
+			term.write( string.sub( sLine, nScroll + 1 ) )
+		end
+		term.setCursorPos( sx + nPos - nScroll, sy )
+	end
+	
+	while true do
+		local sEvent, param = sched.wait(sched,'
+		if sEvent == "char" then
+			sLine = string.sub( sLine, 1, nPos ) .. param .. string.sub( sLine, nPos + 1 )
+			nPos = nPos + 1
+			redraw()
+			
+		elseif sEvent == "key" then
+		    if param == 28 then
+				-- Enter
+				break
+				
+			elseif param == 203 then
+				-- Left
+				if nPos > 0 then
+					nPos = nPos - 1
+					redraw()
+				end
+				
+			elseif param == 205 then
+				-- Right				
+				if nPos < string.len(sLine) then
+					nPos = nPos + 1
+					redraw()
+				end
+			
+			elseif param == 200 or param == 208 then
+                -- Up or down
+				if _tHistory then
+					if param == 200 then
+						-- Up
+						if nHistoryPos == nil then
+							if #_tHistory > 0 then
+								nHistoryPos = #_tHistory
+							end
+						elseif nHistoryPos > 1 then
+							nHistoryPos = nHistoryPos - 1
+						end
+					else
+						-- Down
+						if nHistoryPos == #_tHistory then
+							nHistoryPos = nil
+						elseif nHistoryPos ~= nil then
+							nHistoryPos = nHistoryPos + 1
+						end						
+					end
+					
+					if nHistoryPos then
+                    	sLine = _tHistory[nHistoryPos]
+                    	nPos = string.len( sLine ) 
+                    else
+						sLine = ""
+						nPos = 0
+					end
+					redraw()
+                end
+			elseif param == 14 then
+				-- Backspace
+				if nPos > 0 then
+					sLine = string.sub( sLine, 1, nPos - 1 ) .. string.sub( sLine, nPos + 1 )
+					nPos = nPos - 1					
+					redraw()
+				end
+			end
+		end
+	end
+	
+	term.setCursorBlink( false )
+	term.setCursorPos( w + 1, sy )
+	print()
+	
+	return sLine
+end
 
 sched.all_os={}
 for i,v in pairs(sched.out_os) do
