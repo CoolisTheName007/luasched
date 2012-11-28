@@ -8,6 +8,7 @@
 -----------------------------------------------------------------------------
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
+--WARNING: not ported to CC
 local base = _G
 local coroutine = require("coroutine")
 local string = require("string")

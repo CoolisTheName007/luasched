@@ -77,8 +77,11 @@
 --          [code]
 --      end)
 --------------------------------------------------------------------------------
+if not main then os.loadAPI('APIS/main') end
+REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
+
 local sched = require 'sched'
-local checks = require 'checks'
+local check = require 'checker'.check
 local setmetatable = setmetatable
 local tostring = tostring
 local string = string
@@ -86,15 +89,16 @@ local error = error
 local assert = assert
 local table = table
 local next = next
-local proc = proc -- sched internal table
+local proc = sched.proc -- sched internal table
 local pairs = pairs
 local type = type
 local unpack = unpack
 
-require 'utils.table' -- needed for table.pack. To be removed when we switch to Lua5.2
+local pack=require 'utils.table'.pack -- needed for pack. To be removed when we switch to Lua5.2
 
-
-module(...)
+env=getfenv()
+setmetatable(env,nil)
+--module(...)
 
 --------------------------------------------------------------------------------
 -- 
@@ -217,12 +221,14 @@ end
 -- given time.
 --------------------------------------------------------------------------------
 function synchronized(f)
-    checks('function')
+    check(f,'function')
     local function sync_f(...)
         local k = lock (f)
-        local r = table.pack( f(...) )
+        local r = pack( f(...) )
         unlock(f)
         return unpack (r, 1, r.n)
     end
     return sync_f
 end
+
+return env

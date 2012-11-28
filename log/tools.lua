@@ -1,12 +1,18 @@
+if not main then os.loadAPI('APIS/main') end
+REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
+
 local sched = require"sched"
-local logstore = require"log.store"
+local logstore = require"log.store" --missing, maybe it's optional?
 local log = require"log"
 local unpack = unpack
 local assert = assert
 local tostring = tostring
 local pairs = pairs
 
-module(...)
+env=getfenv()
+setmetatable(env,nil)
+
+--module(...)
 
 local init_func={}
 
@@ -98,4 +104,6 @@ function init(config)
     init_func[config.name](config.params)
 end
 
- 
+
+
+return env

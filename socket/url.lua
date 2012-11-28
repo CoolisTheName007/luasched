@@ -8,6 +8,7 @@
 -----------------------------------------------------------------------------
 -- Declare module
 -----------------------------------------------------------------------------
+--WARNING: not ported to CC
 local string = require("string")
 local base = _G
 local table = require("table")

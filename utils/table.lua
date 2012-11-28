@@ -3,9 +3,10 @@
 --
 -- @module utils.table
 -- 
+if not main then os.loadAPI('APIS/main') end
+REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
 
-
-local coroutine = require"coroutine"
+local coroutine = coroutine --require"coroutine"
 local cleanpath = require"utils.path".clean
 local table = table
 
@@ -38,7 +39,8 @@ function pack(...)
     t.n = n
     return t, n
 end
-table.pack = pack --until we switch to 5.2.
+--Not messing with _G!!
+--table.pack = pack --until we switch to 5.2.
 
 --------------------------------------------------------------------------------
 -- Copies a table from the source to destination table.
@@ -220,7 +222,7 @@ end
 --
 
 function recursivepairs(t, prefix)
-    checks('table', '?string')
+    --checks('table', '?string')
     local function it(t, prefix, cp)
         cp[t] = true
         local pp = prefix == "" and prefix or "."

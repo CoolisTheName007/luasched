@@ -1,6 +1,7 @@
 -----------------------------------------------------------------------------
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
+--WARNING: not ported to CC
 local require = require
 local sched = require 'sched'
 local base = _G

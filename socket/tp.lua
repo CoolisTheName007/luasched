@@ -8,6 +8,7 @@
 -----------------------------------------------------------------------------
 -- Declare module and import dependencies
 -----------------------------------------------------------------------------
+--WARNING: not ported to CC
 local base = _G
 local string = require("string")
 local socket = require("socket")

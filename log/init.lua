@@ -8,8 +8,11 @@
 -- @module log
 --
 
-require 'utils.table' -- needed for table.pack. To be removed when we switch to Lua5.2
-local checks = require 'checks'
+if not main then os.loadAPI('APIS/main') end
+REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
+
+local pack=require 'utils.table'.pack -- needed for table.pack. To be removed when we switch to Lua5.2
+local check = require'checker'.check
 local pcall = pcall
 local string = string
 local table = table
@@ -20,9 +23,11 @@ local base = _G
 local pairs = pairs
 local select = select
 local next = next
+--no more global access
+env=getfenv()
+setmetatable(env,nil)
 
-
-module(...)
+--module(...)
 
 -------------------------------------------------------------------------------
 -- Log levels are strings used to filter logs.
@@ -161,7 +166,7 @@ end
 -- @usage trace("MODULE", "INFO", "message=%s", "sometext").
 --
 function trace(module, severity, fmt, ...)
-    checks('string', 'string', 'string')   
+    check('string,string,string',module, severity, fmt)   
     if not musttrace(module, severity) then return end
     
     local c, s = pcall(string.format, fmt, ...)
@@ -169,7 +174,7 @@ function trace(module, severity, fmt, ...)
         local t
         local function sub(p)
             if     p=="l" then return s
-            elseif p=="t" then t = t or tostring(os.date(timestampformat)) return t
+            elseif p=="t" then t = t or tostring(os.clock(timestampformat)) return t
             elseif p=="m" then return module
             elseif p=="s" then return severity
             else return p end
@@ -208,5 +213,6 @@ end
 -- -----------------------------------------------------------------------------
 -- Make the module callable, so the user can call log(x) instead of log.trace(x)
 -- -----------------------------------------------------------------------------
-setmetatable(_M, {__call = function(_, ...) return trace(...) end })
+setmetatable(env, {__call = function(_, ...) return trace(...) end })
+return env
 

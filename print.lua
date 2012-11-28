@@ -1,5 +1,18 @@
+if not main then os.loadAPI('APIS/main') end
+REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
 
-require 'utils.table' -- needed for table.pack. To be removed when we switch to Lua5.2
+local pack=require 'utils.table'.pack -- needed for pack. To be removed when we switch to Lua5.2
+local io=io
+local string=string
+local table=table
+local type=type
+local tostring=tostring
+local pairs=pairs
+local print=print
+
+
+env=getfenv()
+setmetatable(env,nil)
 
 -- Make sure stdout is actually flushed every line
 if io and io.stdout then
@@ -86,7 +99,7 @@ function vprint (write, print_indent, ...)
          end
       else write(tostring(x)) end
    end
-   local args = table.pack(...)
+   local args = pack(...)
    local nb = args.n
    for k = 1, nb do aux(args[k]); if k<nb then write "\t" end end
 end
@@ -117,3 +130,5 @@ function sprint(...)
 end
 
 function printf(...) return print(string.format(...)) end
+
+return env

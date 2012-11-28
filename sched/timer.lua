@@ -5,7 +5,8 @@
 --      cron-compatible syntax (string conforming to cron syntax)
 --      support simple timers
 ------------------------------------------------------------------------------
-
+if not main then os.loadAPI('APIS/main') end
+REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
 
 local os = os
 local math = math
@@ -16,8 +17,10 @@ local pairs = pairs
 local next = next
 local type = type
 local _G=_G
+local sched=sched
 
-module (...)
+env=getfenv()
+setmetatable(env,nil)
 
 -------------------------------------------------------------------------------------
 -- Common scheduling code
@@ -96,8 +99,9 @@ end
 -------------------------------------------------------------------------------------
 function step()
 	if not events[1] then return end -- if no timer is set just return and prevent further processing
-
-	local now = os.time()
+	-- _G.pprint(events)
+	-- read()
+	local now = os.clock()
 	while events[1] and now >= events[1] do
 		local d = table.remove(events, 1)
 		local entries = events[d]
@@ -108,7 +112,7 @@ function step()
 				local ev = timer.event
 				-- trig the timer. If the trigger is a hook, call it, otherwise signal a timer event
 				if type(ev) == 'function' then ev(timer)
-				else _G.sched.signal(timer.emitter or timer, ev or 'run') end
+				else sched.signal(timer.emitter or timer, ev or 'run') end
 				addtimer(timer) -- reschedule when necessary
 			end
 		end
@@ -125,7 +129,7 @@ end
 function set(t, em, ev)
 	t = math.ceil(t)
 	assert(t>=0, "parameter must be a positive number")
-	local nd = os.time() + t
+	local nd = os.clock() + t
 	em = em or 'timer'
 	ev = ev or "@"..nd
 	local timer = { nextevent=stimer_nextevent, nd=nd, emitter=em, event=ev }
@@ -141,4 +145,5 @@ function nextevent()
 	return events[1]
 end
 
-return _M
+--return _M
+return env

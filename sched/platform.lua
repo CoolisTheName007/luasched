@@ -1,11 +1,16 @@
-require 'sched.timer'
-require 'sched.fd'
-require 'print'
-require 'pack'
-require 'log'
-require 'utils.table' -- used at least for table.pack
+--submodule?module tweak?
+if not main then os.loadAPI('APIS/main') end
+REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
 
-local os_time = os.time
+local sched=sched
+sched.timer=require('sched.timer',nil,{sched=sched})
+local proc=sched.proc
+sched.fd=require('sched.fd',nil,{sched=sched})
+local print=print
+local pack=require 'utils.table'.pack
+local log=require 'log'
+
+local os_time = os.clock
 ------------------------------------------------------------------------------
 --
 ------------------------------------------------------------------------------
@@ -65,7 +70,7 @@ function sched.listen(port)
         end
 
         local function enqueue(...)
-            local t = table.pack(...)
+            local t = pack(...)
             if not queue then queue = {t} sched.run(sendsignals)
             else table.insert(queue, t) end
             return "again"

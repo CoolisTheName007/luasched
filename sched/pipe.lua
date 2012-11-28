@@ -69,14 +69,17 @@
 -- 
 --------------------------------------------------------------------------------
 
-require 'checks'
+if not main then os.loadAPI('APIS/main') end
+REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
+
+local check=require 'checker'.check
 
 --------------------------------------------------------------------------------
 -- Object metatable/class
 --------------------------------------------------------------------------------
 local P = { __type='pipe' }; P.__index = P
 
-local insert, remove, os_time = table.insert, table.remove, os.time
+local insert, remove, os_time = table.insert, table.remove, os.clock
 
 --------------------------------------------------------------------------------
 -- A registry of all currently active pipes. This is intended as a debug aid,
@@ -88,7 +91,7 @@ local insert, remove, os_time = table.insert, table.remove, os.time
 -- Create a new pipe
 --------------------------------------------------------------------------------
 function pipe(maxlength)
-    checks ('?number')
+    check ('?number',maxlength)
     local instance = { 
         sndidx     = 1;
         rcvidx     = 1;
@@ -151,7 +154,7 @@ end
 -- Read a value, yield the current task if necessary
 --------------------------------------------------------------------------------
 function P :receive (timeout)
-    checks ('pipe', '?number')
+    check ('pipe,?number',self,timeout)
     local due_date
     while true do
         if self.rcvidx==self.sndidx then
@@ -177,7 +180,7 @@ end
 -- Push a value to read
 --------------------------------------------------------------------------------
 function P :send (x, timeout)
-    checks ('pipe', '?', '?number')
+    check ('pipe,?,?number',self, x, timeout)
     assert (x~=nil, "Don't :send(nil) in a pipe")
     local maxlength = self.maxlength
     local due_date
@@ -247,7 +250,7 @@ end
 -- Change or remove (by passing nil) the curent pipe length limitation.
 --------------------------------------------------------------------------------
 function P :setmaxlength(maxlength)
-    checks ('pipe','?number')
+    check ('pipe,?number',self,maxlength)
     if self :length() > maxlength then return nil, 'length exceeds new maxlength' end
     if maxlength and maxlength<1 then return nil, 'invalid maxlength' end
     self.maxlength = maxlength

@@ -18,8 +18,10 @@
 -- 
 -- @module utils.path
 --
+if not main then os.loadAPI('APIS/main') end
+REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
 
-local checks = require"checks"
+local check = require"checker".check
 
  
 
@@ -74,7 +76,7 @@ end
 --
 
 function clean(path)
-    checks('string')
+    check('string',path)
     local p = segments(path)
     return pathconcat(p)
 end
@@ -95,7 +97,7 @@ end
 --
 
 function set(t, path, value)
-    checks('table', 'string|table', '?')
+    check('table,string|table',t, path)
     local p = type(path)=='string' and segments(path) or path
     local k = table.remove(p)
     local t = find(t, p, value~=nil) -- only create the table structure if the value to set is non nil!
@@ -115,7 +117,7 @@ end
 -- @return nil otherthise.
 --
 function get(t, path)
-    checks('table', 'string|table')
+    check('table,string|table',t,path)
     local p = type(path)=='string' and segments(path) or path
     local k = table.remove(p)
     if not k then return t end
@@ -136,7 +138,7 @@ end
 --
 
 function gsplit (path)
-    checks ('string')
+    check ('string',path)
     local segs  = segments(path)
     local nsegs = #segs
     local limit = nsegs
@@ -173,7 +175,7 @@ end
 --
 
 function split(path, n)
-    checks('string', 'number')
+    check('string,number',path,n)
     local segments = segments(path)
     if      n>#segments then return path, ''
     elseif -n>#segments then return '', path
@@ -194,7 +196,7 @@ end
 --
 
 function segments(path)
-    checks('string')
+    check('string',path)
     local t = {}    
     local index, newindex, elt = 1
     repeat
@@ -233,7 +235,7 @@ end
 --     find(config, "toto.titi") -- will return the table titi
 --
 function find(t, path, force)
-    checks('table', 'string|table', '?')
+    check('table,string|table', t,path)
     path = type(path)=="string" and segments(path) or path
     for i, n in ipairs(path) do
         local v  = t[n]

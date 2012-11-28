@@ -8,6 +8,7 @@
 -----------------------------------------------------------------------------
 -- Declare module and import dependencies
 -------------------------------------------------------------------------------
+--WARNING: not ported to CC
 local socket = require("socket")
 local url = require("socket.url")
 local ltn12 = require("ltn12")

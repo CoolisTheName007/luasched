@@ -3,8 +3,10 @@
 -- log.settarget() to the log module.
 -- See function comment below for details.
 -------------------------------------------------------------------------------
+if not main then os.loadAPI('APIS/main') end
+REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
 
-require 'log'
+log=require 'log'
 
 -------------------------------------------------------------------------------
 -- original_displayloger: allow to revert to default behavior

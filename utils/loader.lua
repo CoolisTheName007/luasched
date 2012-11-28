@@ -6,12 +6,14 @@
 --
 --@module utils.loader
 -- 
+if not main then os.loadAPI('APIS/main') end
+REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
 
 local table = table
 local load = load
 local type= type
 local _G = _G
-local checks = require"checks"
+local check = require "checker".check
 
 local M={}
 --------------------------------------------------------------------------------
@@ -31,7 +33,7 @@ local M={}
 --
 
 function loadbuffer (buffer, name, destroy)
-    checks("table", "?string", "?")
+    check("table,?string",buffer, name)
     local remove = table.remove
     local function dest_reader() return remove (buffer, 1) end
     local i = 0
@@ -56,7 +58,7 @@ end
 --
 
 function unload(name)
-    checks("string")
+    check("string",name)
     local l = _G.package.loaded
     local p = l[name]
     local u = type(p) == 'table' and p.__unload

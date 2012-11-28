@@ -6,7 +6,7 @@
 -- run in parallel, and to communicate together when they need to
 -- interact.
 -- 
--- It offers a convinient way to write programs which address multiple
+-- It offers a convenient way to write programs which address multiple
 -- I/O driven issues simultaneously, with much less hassle than with
 -- preemptive multithreading frameworks; it also doesn't require
 -- developers to adopt unusual programming styles, as expected by Erlang,
@@ -377,6 +377,7 @@
 -- 
 --     sched.run(function()
 --         local f = io.open('/tmp/time.txt', 'w')
+--         local f = io.open('/tmp/time.txt', 'w')
 --         while true do
 --             f :write(os.date(), '\n')
 --             f :flush()
@@ -390,19 +391,25 @@
 -- @module sched
 
 
-require 'log'
-require 'checks'
+if not main then os.loadAPI('APIS/main') end
+REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
+--
 
-local sched = { }; _G.sched = sched
 
-require 'sched.timer'
+local log=require 'log'
+local check=require 'checker'.check
 
+local sched = { }; --_G.sched = sched
+
+local timer	=require 'sched.timer'
+local pack	=require 'utils.table'.pack	
+local sprint =require 'print'.sprint
 --
 -- if true, scheduling functions are stored in the global environment as well
 -- as in table `sched`. For instance, `signal()` is accessible both as
 -- `signal()` and as `sched.signal()`.
 --
-local UNPACK_SCHED = true
+local UNPACK_SCHED = false
 
 --
 -- if true, public `sched.*` APIs are provided in all-lowercase spelling, as most
@@ -428,9 +435,12 @@ local CLEANUP_REQUIRED = false
 -- It must not be used as a direct way to manipulate tasks, but analysing its
 -- content interactively  is an effective way to debug concurrency issues.
 --
+
+--no messing with _G
 __tasks       = { }
-if   rawget(_G, 'proc') then proc.tasks=__tasks
-else rawset(_G, 'proc', { tasks=__tasks}) end
+sched.proc={ tasks=__tasks}
+-- if   rawget(_G, 'proc') then proc.tasks=__tasks
+-- else rawset(_G, 'proc', { tasks=__tasks}) end
 
 ------------------------------------------------------------------------------
 -- List of tasks ready to be rescheduled.
@@ -486,8 +496,8 @@ __tasks.waiting = setmetatable({ }, {__mode='k'})
 ------------------------------------------------------------------------------
 __tasks.running = nil
 
-local getinfo=debug.getinfo
-local function iscfunction(f) return getinfo(f).what=='C' end
+--local getinfo=debug.getinfo
+--local function iscfunction(f) return getinfo(f).what=='C' end
 
 ------------------------------------------------------------------------------
 -- Runs a function as a new thread.
@@ -502,10 +512,10 @@ local function iscfunction(f) return getinfo(f).what=='C' end
 --
 
 function sched.run (f, ...)
-    checks ('function')
+    check('function',f)
     local ready = __tasks.ready
 
-    if iscfunction(f) then local cf=f; f=function(...) return cf(...) end end
+    --if iscfunction(f) then local cf=f; f=function(...) return cf(...) end end
 
     local thread = coroutine.create (f)
     local cell   = { thread, ... }
@@ -545,7 +555,7 @@ function sched.step()
         if not success and msg ~= KILL_TOKEN then
             -- report the error msg
             print ("In " .. tostring(thread)..": error: " .. tostring(msg))
-            print (debug.traceback(thread))
+            --print (debug.traceback(thread))
         end
         ---------------------------------------------
         -- If the coroutine died, signal it for those
@@ -599,11 +609,11 @@ local function runcell(c, emitter, event, args, wokenup_tasks, new_queue)
             { thread, unpack(args, 1, nargs) }
         if not wokenup_tasks then wokenup_tasks = __tasks.ready end
         table.insert(wokenup_tasks, newcell)
-        for k in pairs(c) do c[k]=nil end
+        cell={}
 
     elseif c.hook then -- callback is run synchronously
         local function f() return c.hook(unpack(args, 1, nargs)) end
-        local ok, errmsg = xpcall(f, debug.traceback)
+        local ok,errmsg = pcall(f)--local ok, errmsg = xpcall(f, debug.traceback)
         local reattach_hook = not c.once
         if ok then -- pass
         elseif errmsg == KILL_TOKEN then -- killed with killself()
@@ -621,7 +631,7 @@ local function runcell(c, emitter, event, args, wokenup_tasks, new_queue)
         end
         if reattach_hook then
             if new_queue then table.insert (new_queue, c) end
-        else for k in pairs(c) do c[k]=nil end end
+        else cell={} end
     else end -- emptied cell, ignore it.
 end
 
@@ -644,7 +654,7 @@ end
 
 function sched.signal (emitter, event, ...)
     log.trace ('sched', 'DEBUG', "SIGNAL %s.%s", tostring(emitter), event)
-    local args  = table.pack(event, ...) -- args passed to hooks & rescheduled tasks
+    local args  = pack(event, ...) -- args passed to hooks & rescheduled tasks
     local ptw   = __tasks.waiting
     local ptr   = __tasks.running
     local ptrdy = __tasks.ready
@@ -745,7 +755,7 @@ local function register (cell, emitter, events)
             local function timeout_callback()
                 if next(cell) then
                     runcell(cell, emitter, 'timeout', { 'timeout', event, n=2 })
-                    for k in pairs(cell) do cell[k]=nil end
+                    cell={}
                     --sched.step() -- schedule it
                 end
             end
@@ -835,7 +845,7 @@ end
 
 function sched.wait (emitter, ...)
     local current = __tasks.running or
-        error ("Don't call wait() while not running!\n"..debug.traceback())
+        error ("Don't call wait() while not running!")--\n"..debug.traceback())
     local cell = { thread = current }
     local nargs = select('#', ...)
 
@@ -872,7 +882,7 @@ function sched.wait (emitter, ...)
     local x = { coroutine.yield () }
 
     if x and x[1] == KILL_TOKEN then
-        for k in pairs(cell) do cell[k]=nil end; error(KILL_TOKEN)
+        cell={}; error(KILL_TOKEN)
     else return unpack(x) end
 end
 
@@ -893,9 +903,9 @@ end
 --
 
 function sched.multiWait (emitters, events)
-    checks('table', 'string|table|number')
+    check('table,string|table|number',emitters, events)
     local current = __tasks.running or
-        error ("Don't call wait() while not running!\n"..debug.traceback())
+        error ("Don't call wait() while not running!")--\n"..debug.traceback())
     if type(events)~='table' then events={events} end
 
     local cell = { thread=current, multiwait=true, multi=true }
@@ -921,7 +931,7 @@ function sched.multiWait (emitters, events)
     local x = { coroutine.yield () }
 
     if x and x[1] == KILL_TOKEN then
-        for k in pairs(cell) do cell[k]=nil end; error(KILL_TOKEN)
+        cell={}; error(KILL_TOKEN)
     else return unpack(x) end
 end
 
@@ -956,8 +966,8 @@ end
 --
 
 function sched.sigHook (emitter, events, f, ...)
-    checks ('?', 'string|table|number', 'function')
-    local xtrargs = table.pack(...); if not xtrargs[1] then xtrargs=nil end
+    check ('?,string|table|number,function',emitter, events, f)
+    local xtrargs = pack(...); if not xtrargs[1] then xtrargs=nil end
     local cell = { hook = f, xtrargs=xtrargs }
     if type(events)~='table' then events={events} end
     register (cell, emitter, events)
@@ -983,8 +993,8 @@ end
 --
 
 function sched.sigOnce (emitter, events, f, ...)
-    checks ('?', 'string|table|number', 'function')
-    local xtrargs = table.pack(...); if not xtrargs[1] then xtrargs=nil end
+    check ('?,string|table|number,function',emitter, events, f)
+    local xtrargs = pack(...); if not xtrargs[1] then xtrargs=nil end
     local cell = { hook = f, once=true, xtrargs=xtrargs }
     if type(events)~='table' then events={events} end
     register (cell, emitter, events)
@@ -993,7 +1003,7 @@ end
 
 -- Common helper for sigrun and sigrunonce
 local function sigrun(once, emitter, events, f, ...)
-    local xtrargs = table.pack(...); if not xtrargs[1] then xtrargs=nil end
+    local xtrargs = pack(...); if not xtrargs[1] then xtrargs=nil end
     local cell, hook
     -- To ensure that a killself() in the task also kills
     -- the wrapping hook, attach this to the task's 'die' event.
@@ -1036,7 +1046,7 @@ end
 --
 
 function sched.sigRun(...)
-    checks ('?', 'string|table|number', 'function')
+    check ('?,string|table|number,function',...)
     return sigrun(false, ...)
 end
 ------------------------------------------------------------------------------
@@ -1060,7 +1070,7 @@ end
 --
 
 function sched.sigRunOnce(...)
-    checks ('?', 'string|table|number', 'function')
+    check ('?,string|table|number,function',...)
     return sigrun(true, ...)
 end
 
@@ -1075,7 +1085,7 @@ end
 -- There's usually no need to call this function explicitly, it will be triggered
 -- automatically when it's needed and the scheduler is about to go idle.
 -- @function [parent=#sched] gc
--- @return memory available (in number of bytes) after gc.
+-- disabled @return memory available (in number of bytes) after gc.
 --
 
 function sched.gc()
@@ -1100,8 +1110,8 @@ function sched.gc()
         if not_processing and not next(events) then ptw[emitter] = nil end
     end
 
-    collectgarbage 'collect'
-    return math.floor(collectgarbage 'count' * 1000)
+    --collectgarbage 'collect'
+    --return math.floor(collectgarbage 'count' * 1000)
 end
 
 ------------------------------------------------------------------------------
@@ -1180,6 +1190,6 @@ end
 
 
 -- Load platform-dependent code
-require 'sched.platform'
+require('sched.platform',nil,{sched=sched})
 
 return sched
