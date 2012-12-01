@@ -13,7 +13,7 @@ When compressed with minecopy, this folders ammount to 32 kB.
 - checker module, in one of my repositories; put the repository in 'packages'.
 
 #Port Status:
-	Almost all of the files here content is ported. Check out the rest at the original repository.
+	All of the files here are ported. Check out the rest at the original repository.
 	Next target is the feature-rich shell.
 
 #Bugfixing
