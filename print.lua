@@ -1,5 +1,5 @@
 if not main then os.loadAPI('APIS/main') end
-REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
+PACKAGE_PATH='luasched'
 
 local pack=require 'utils.table'.pack -- needed for pack. To be removed when we switch to Lua5.2
 local io=io
