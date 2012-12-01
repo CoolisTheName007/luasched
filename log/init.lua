@@ -9,7 +9,7 @@
 --
 
 if not main then os.loadAPI('APIS/main') end
-REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
+PACKAGE_NAME='luasched'
 
 local pack=require 'utils.table'.pack -- needed for table.pack. To be removed when we switch to Lua5.2
 local check = require'checker'.check
@@ -23,6 +23,8 @@ local base = _G
 local pairs = pairs
 local select = select
 local next = next
+
+local pprint=pprint --TBR
 --no more global access
 env=getfenv()
 setmetatable(env,nil)
@@ -166,9 +168,9 @@ end
 -- @usage trace("MODULE", "INFO", "message=%s", "sometext").
 --
 function trace(module, severity, fmt, ...)
-    check('string,string,string',module, severity, fmt)   
+    check('string,string,string',module, severity, fmt)
     if not musttrace(module, severity) then return end
-    
+	
     local c, s = pcall(string.format, fmt, ...)
     if c then
         local t

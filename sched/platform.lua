@@ -1,6 +1,6 @@
 --submodule?module tweak?
 if not main then os.loadAPI('APIS/main') end
-REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
+PACKAGE_NAME='luasched'
 
 local sched=sched
 sched.timer=require('sched.timer',nil,{sched=sched})
@@ -27,7 +27,7 @@ function sched.loop ()
         sched.timer.nextevent, sched.timer.step, sched.step, sched.fd.step
 
     while loop_state=='running' do
-        
+        if sched.n_tasks==0 then sched.stop() end
         timer_step() -- Reschedule tasks and trigger hooks which wait for a timer        
         sched_step() -- Run all the tasks ready to run
 
@@ -40,7 +40,7 @@ function sched.loop ()
                 timeout = date<now and 0 or date-now 
             end
         end
-
+	
         fd_step (timeout) -- Wait for FD events until next timer is due
     end
 end

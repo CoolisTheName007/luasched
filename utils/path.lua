@@ -19,9 +19,10 @@
 -- @module utils.path
 --
 if not main then os.loadAPI('APIS/main') end
+local check = require"checker".check
 REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
 
-local check = require"checker".check
+
 
  
 

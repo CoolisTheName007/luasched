@@ -4,7 +4,7 @@
 -- See function comment below for details.
 -------------------------------------------------------------------------------
 if not main then os.loadAPI('APIS/main') end
-REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
+PACKAGE_NAME='luasched'
 
 log=require 'log'
 

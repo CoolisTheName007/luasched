@@ -1,3 +1,6 @@
+--[[Adaptation by CoolisTheName007
+
+]]
 -- *(c) Sierra Wireless, 2007-2012*
 
 --------------------------------------------------------------------------------
@@ -392,11 +395,12 @@
 
 
 if not main then os.loadAPI('APIS/main') end
-REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
+PACKAGE_NAME='luasched'
 --
 
 
 local log=require 'log'
+
 local check=require 'checker'.check
 
 local sched = { }; --_G.sched = sched
@@ -436,6 +440,7 @@ local CLEANUP_REQUIRED = false
 -- content interactively  is an effective way to debug concurrency issues.
 --
 
+sched.n_tasks=0 --# of tasks
 --no messing with _G
 __tasks       = { }
 sched.proc={ tasks=__tasks}
@@ -518,6 +523,7 @@ function sched.run (f, ...)
     --if iscfunction(f) then local cf=f; f=function(...) return cf(...) end end
 
     local thread = coroutine.create (f)
+	sched.n_tasks=sched.n_tasks+1
     local cell   = { thread, ... }
     table.insert (ready, cell)
     log.trace ('sched', 'DEBUG', "SCHEDULE %s", tostring (thread))
@@ -552,16 +558,19 @@ function sched.step()
         __tasks.running = thread
         log.trace ('sched', 'DEBUG', "STEP %s", tostring (thread))
         local success, msg = coroutine.resume (unpack (cell))
-        if not success and msg ~= KILL_TOKEN then
+        if not success then
             -- report the error msg
             print ("In " .. tostring(thread)..": error: " .. tostring(msg))
             --print (debug.traceback(thread))
-        end
+        elseif msg==KILL_TOKEN then
+			coroutine.resume(unpack (cell))
+		end
         ---------------------------------------------
         -- If the coroutine died, signal it for those
         -- who synchronize on its termination.
         ---------------------------------------------
         if coroutine.status (thread) == "dead" then
+			sched.n_tasks=sched.n_tasks-1
             sched.signal (thread, "die", success, msg)
         end
     end
@@ -609,16 +618,13 @@ local function runcell(c, emitter, event, args, wokenup_tasks, new_queue)
             { thread, unpack(args, 1, nargs) }
         if not wokenup_tasks then wokenup_tasks = __tasks.ready end
         table.insert(wokenup_tasks, newcell)
-        cell={}
+        local del='' for k in pairs(c) do c[del]=nil del=k end c[del]=nil
 
     elseif c.hook then -- callback is run synchronously
         local function f() return c.hook(unpack(args, 1, nargs)) end
         local ok,errmsg = pcall(f)--local ok, errmsg = xpcall(f, debug.traceback)
         local reattach_hook = not c.once
-        if ok then -- pass
-        elseif errmsg == KILL_TOKEN then -- killed with killself()
-            reattach_hook = false
-        else -- non-KILL error
+        if not ok then-- error
             if type(errmsg)=='string' and errmsg :match "^attempt to yield" then
                 errmsg = "Cannot block in a hook, consider sched.sigrun()\n" ..
                     (errmsg :match "function 'yield'\n(.-)%[C%]: in function 'xpcall'"
@@ -628,10 +634,12 @@ local function runcell(c, emitter, event, args, wokenup_tasks, new_queue)
                 tostring(emitter), event, tostring(errmsg))
             log('sched', 'ERROR', errmsg)
             print (errmsg)
-        end
+        elseif errmsg == KILL_TOKEN then -- killed with killself()
+            reattach_hook = false
+		end
         if reattach_hook then
             if new_queue then table.insert (new_queue, c) end
-        else cell={} end
+        else local del='' for k in pairs(c) do c[del]=nil del=k end c[del]=nil end
     else end -- emptied cell, ignore it.
 end
 
@@ -666,10 +674,10 @@ function sched.signal (emitter, event, ...)
     -- `wokenup_tasks`: tasks to reschedule because they were waiting
     --                  for this signal.
     --------------------------------------------------------------------
-    local emq = ptw [emitter]; if not emq then return end
+    
     local wokenup_tasks = { }
 
-    local function parse_queue (event_key)
+    local function parse_queue (emq,event_key)
         local old_queue = emq [event_key]
         if not old_queue then return end
         local new_queue = { }
@@ -696,8 +704,16 @@ function sched.signal (emitter, event, ...)
 
    local was_already_processing = __tasks.signal_processing
    __tasks.signal_processing = true
-    parse_queue('*')
-    parse_queue(event)
+    local emq = ptw [emitter]
+	if emq then
+		parse_queue(emq,'*')
+		parse_queue(emq,event)
+	end
+	emq = ptw ['*']
+	if emq then
+		parse_queue(emq,'*')
+		parse_queue(emq,event)
+	end
     __tasks.signal_processing = was_already_processing
 
     --------------------------------------------------------------------
@@ -844,6 +860,7 @@ end
 --
 
 function sched.wait (emitter, ...)
+	if emitter=='*' then return sched.multiWait({'*'},...) end
     local current = __tasks.running or
         error ("Don't call wait() while not running!")--\n"..debug.traceback())
     local cell = { thread = current }
@@ -882,7 +899,7 @@ function sched.wait (emitter, ...)
     local x = { coroutine.yield () }
 
     if x and x[1] == KILL_TOKEN then
-        cell={}; error(KILL_TOKEN)
+        cell={}; coroutine.yield(KILL_TOKEN)
     else return unpack(x) end
 end
 
@@ -931,7 +948,7 @@ function sched.multiWait (emitters, events)
     local x = { coroutine.yield () }
 
     if x and x[1] == KILL_TOKEN then
-        cell={}; error(KILL_TOKEN)
+        cell={}; coroutine.yield(KILL_TOKEN)
     else return unpack(x) end
 end
 
@@ -1009,7 +1026,7 @@ local function sigrun(once, emitter, events, f, ...)
     -- the wrapping hook, attach this to the task's 'die' event.
     -- TODO: ensure that the hook cannot leak by leaving a zombie event
     local function propagate_killself(die_event, status, err)
-        if not status and err==KILL_TOKEN then sched.kill(cell) end
+        if err==KILL_TOKEN then sched.kill(cell) end
     end
     local function hook (ev, ...)
         local t = sched.run(f, ev, ...)
@@ -1095,8 +1112,12 @@ function sched.gc()
     local not_processing, ptw = not __tasks.signal_processing, __tasks.waiting
 
     -- Getting rid of entries waiting for a dead thread / dead channel
-    for emitter, events in pairs(ptw) do
+    local del1
+	for emitter, events in pairs(ptw) do
+		if del1 then ptw[del1]=nil end
+		local del2
         for event, event_queue in pairs(events) do
+			if del2 then events[del2]=nil end
             local i, len = 1, #event_queue
             while i<=len do
                 local cell = event_queue[i]
@@ -1104,10 +1125,10 @@ function sched.gc()
                 or cell.thread and costatus(cell.thread)=="dead" -- dead thread
                 then table.remove(event_queue, i); len=len-1 else i=i+1 end
             end
-            if not_processing and not next(event_queue) then events[event] = nil end  -- event with empty queue
+            if not_processing and not next(event_queue) then del2=event end--events[event] = nil end  -- event with empty queue
         end
         -- remove emitter if there's no pending event left:
-        if not_processing and not next(events) then ptw[emitter] = nil end
+        if not_processing and not next(events) then del1=emitter end--ptw[emitter] = nil end
     end
 
     --collectgarbage 'collect'
@@ -1134,7 +1155,7 @@ function sched.kill (x)
     if tx=='table' then
         if x.hook then
             -- Cancel a hook
-            for k in pairs(x) do x[k]=nil end
+            local del='' for k in pairs(x) do x[del]=nil del=k end x[del]=nil
             CLEANUP_REQUIRED = true
         elseif not next(x) then -- emptied cell
             log('sched', 'DEBUG', "Attempt to kill a dead cell")
@@ -1143,7 +1164,7 @@ function sched.kill (x)
         end
     elseif x==__tasks.running then
         -- Kill current thread
-        error (KILL_TOKEN)
+        coroutine.yield(KILL_TOKEN)
     elseif tx=='thread' then
         -- Kill a non-running thread
         coroutine.resume (x, KILL_TOKEN)
@@ -1160,7 +1181,8 @@ end
 --
 
 function sched.killSelf()
-    error (KILL_TOKEN)
+    coroutine.yield(KILL_TOKEN)
+	error()
 end
 
 ------------------------------------------------------------------------------

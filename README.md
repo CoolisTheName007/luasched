@@ -1,3 +1,26 @@
+This is an a port of the Sierra Wireless luasched to ComputerCraft.
+
+#Size:
+When compressed with minecopy, this folders ammount to 32 kB.
+#Improvements:
+- now supports waiting for any emitter, e.g. sched.wait('*',event1,event2,...);
+- sched.n_tasks keeps track of the # of tasks
+- sched.rpl_os has replacements for the basic os functions, check out fd.lua for those.
+#Requirements:
+- loadreq API, in one of my repositories.
+#Port Status:
+	Almost all of the files here content is ported. Check out the rest at the original repository.
+	Next target is the feature-rich shell.
+#Bugfixing
+This may have been necessary due to the different Lua implementations.
+-table nil-ing;
+-KILL_TOKEN is not used as originally due to error() always passing a string;
+#Testing:
+- Minimal.
+
+Below is the original README.
+
+
 (c) Sierra Wireless, 2007-2012
 
 About

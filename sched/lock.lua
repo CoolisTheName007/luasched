@@ -78,7 +78,7 @@
 --      end)
 --------------------------------------------------------------------------------
 if not main then os.loadAPI('APIS/main') end
-REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
+PACKAGE_NAME='luasched'
 
 local sched = require 'sched'
 local check = require 'checker'.check

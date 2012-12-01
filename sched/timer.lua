@@ -6,7 +6,7 @@
 --      support simple timers
 ------------------------------------------------------------------------------
 if not main then os.loadAPI('APIS/main') end
-REQUIRE_PATH='packages/luasched/?;packages/luasched/?.lua;packages/luasched/?/init.lua'
+PACKAGE_NAME='luasched'
 
 local os = os
 local math = math
