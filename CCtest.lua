@@ -30,23 +30,30 @@ end
 
 
 sched=require 'packages.luasched.sched'
+
 log=require 'packages.luasched.log'
-log.setlevel('ALL','fd')
+
+for i,v in pairs(sched.rpl_os.all_os) do
+	rawset(os,i,v)
+end
 sched.run (function()
-	print(1)
-	sched.wait(2)
-	print(1)
+	print('a in')
+	print(sched.n_tasks)
+	print('a out')
 end)
 
 sched.run(function()
-	print(1)
-	sched.wait(1)
-	print(1)
+	print('b in')
+	sched.wait()
+	print('b out')
 end)
 
 sched.run(function()
-	sched.wait(sched,'terminate')
-	print('Terminated')
+	repeat
+		event=sched.wait('*','terminate','die')
+		if event=='terminate' then print('terminated') break end
+	until sched.n_tasks==1
 	sched.stop()
+	sched.killSelf()
 end)
 sched.loop()
