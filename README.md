@@ -9,7 +9,8 @@ When compressed with minecopy, this folders ammount to 32 kB.
 - sched.rpl_os has replacements for the basic os functions, check out fd.lua for those.
 
 #Requirements:
-- loadreq API, in one of my repositories.
+- loadreq API, in one of my repositories; put the repository in 'packages'.
+- checker module, in one of my repositories; put the repository in 'packages'.
 
 #Port Status:
 	Almost all of the files here content is ported. Check out the rest at the original repository.
